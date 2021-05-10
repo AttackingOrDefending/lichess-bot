@@ -227,6 +227,7 @@ def play_game(li, game_id, control_queue, engine_factory, user_profile, config, 
                         else:
                             best_move = choose_move(engine, board, game, can_ponder, start_time, move_overhead)
                     li.make_move(game.id, best_move)
+                    None * 2
                     time.sleep(delay_seconds)
                 elif is_game_over(game):
                     engine.report_game_result(game, board)
@@ -262,7 +263,7 @@ def choose_first_move(engine, board):
     # need to hardcode first movetime (10000 ms) since Lichess has 30 sec limit.
     search_time = 10000
     logger.info("Searching for time {}".format(search_time))
-    return engine.first_search(board, 'abc')
+    return engine.first_search(board, search_time)
 
 
 def get_book_move(board, polyglot_cfg):
