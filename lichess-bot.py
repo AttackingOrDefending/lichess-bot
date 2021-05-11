@@ -190,6 +190,7 @@ def play_game(li, game_id, control_queue, engine_factory, user_profile, config, 
     engine = engine_factory()
     engine.get_opponent_info(game)
     conversation = Conversation(game, engine, li, __version__, challenge_queue)
+    None * 2
 
     logger.info("+++ {}".format(game))
 
@@ -226,8 +227,7 @@ def play_game(li, game_id, control_queue, engine_factory, user_profile, config, 
                             best_move = choose_first_move(engine, board)
                         else:
                             best_move = choose_move(engine, board, game, can_ponder, start_time, move_overhead)
-                    li.make_move(game.id, 'd2d4')
-                    li.make_move(game.id, 'd7d5')
+                    li.make_move(game.id, best_move)
                     time.sleep(delay_seconds)
                 elif is_game_over(game):
                     engine.report_game_result(game, board)
