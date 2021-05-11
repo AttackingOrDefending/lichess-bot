@@ -22,7 +22,7 @@ def download_sf():
 
 def run_bot(logging_level):
     lichess_bot.logger.info(lichess_bot.intro())
-    CONFIG = {'token': 'INSERT TOKEN HERE', 'url': 'https://lichess.org/', 'engine': {'dir': '.', 'name': 'sf.exe', 'protocol': 'uci', 'uci_ponder': True, 'polyglot': {'enabled': False}, 'uci_options': {'Move Overhead': 1000}, 'silence_stderr': False}, 'abort_time': 20, 'fake_think_time': False, 'move_overhead': 2000, 'challenge': {'concurrency': 0, 'sort_by': 'best', 'accept_bot': False, 'only_bot': False, 'max_increment': 180, 'min_increment': 0, 'max_base': 600, 'min_base': 0, 'variants': ['standard'], 'time_controls': ['bullet', 'blitz'], 'modes': ['casual', 'rated']}}
+    CONFIG = {'token': 'mZnkopRGcYJDmI5f', 'url': 'https://lichess.org/', 'engine': {'dir': '.', 'name': 'sf.exe', 'protocol': 'uci', 'uci_ponder': True, 'polyglot': {'enabled': False}, 'uci_options': {'Move Overhead': 1000}, 'silence_stderr': False}, 'abort_time': 20, 'fake_think_time': False, 'move_overhead': 2000, 'challenge': {'concurrency': 0, 'sort_by': 'best', 'accept_bot': False, 'only_bot': False, 'max_increment': 180, 'min_increment': 0, 'max_base': 600, 'min_base': 0, 'variants': ['standard'], 'time_controls': ['bullet', 'blitz'], 'modes': ['casual', 'rated']}}
     li = lichess_bot.lichess.Lichess(CONFIG["token"], CONFIG["url"], lichess_bot.__version__)
 
     user_profile = li.get_profile()
@@ -52,8 +52,10 @@ def run_bot(logging_level):
         result = list(filter(lambda line: 'result' in line, response))
         result = result[0][9:-2]
         color = list(filter(lambda line: 'white' in line, response))
+        print(color, username)
         color = 'w' if username.lower() in color[0] else 'b'
         win = result == '1-0' and color == 'w' or result == '0-1' and color == 'b'
+        print('---', color, result, win)
         assert win
     else:
         lichess_bot.logger.error("{} is not a bot account. Please upgrade it to a bot account!".format(user_profile["username"]))
