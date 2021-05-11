@@ -1,6 +1,7 @@
 import pytest
 import zipfile
 import requests
+import time
 from shutil import copyfile
 import importlib
 lichess_bot = importlib.import_module("lichess-bot")
