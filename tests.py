@@ -52,9 +52,9 @@ def run_bot(logging_level):
         result = list(filter(lambda line: 'result' in line, response))
         result = result[0][9:-2]
         color = list(filter(lambda line: 'white' in line, response))
-        color = 'w' if username in color else 'b'
+        color = 'w' if username.lower() in color else 'b'
         win = result == '1-0' and color == 'w' or result == '0-1' and color == 'b'
-        print(color, result, win)
+        print('---', color, result, win)
         assert win
     else:
         lichess_bot.logger.error("{} is not a bot account. Please upgrade it to a bot account!".format(user_profile["username"]))
