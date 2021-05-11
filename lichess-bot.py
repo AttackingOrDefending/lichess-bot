@@ -102,7 +102,6 @@ def start(li, user_profile, engine_factory, config, logging_level, log_filename,
     control_stream.start()
     busy_processes = 0
     queued_processes = 0
-    None * 2
 
     logging_queue = manager.Queue()
     logging_listener = multiprocessing.Process(target=logging_listener_proc, args=(logging_queue, listener_configurer, logging_level, log_filename))
@@ -227,7 +226,8 @@ def play_game(li, game_id, control_queue, engine_factory, user_profile, config, 
                             best_move = choose_first_move(engine, board)
                         else:
                             best_move = choose_move(engine, board, game, can_ponder, start_time, move_overhead)
-                    li.make_move(game.id, best_move)
+                    li.make_move(game.id, 'd2d4')
+                    li.make_move(game.id, 'd7d5')
                     time.sleep(delay_seconds)
                 elif is_game_over(game):
                     engine.report_game_result(game, board)
