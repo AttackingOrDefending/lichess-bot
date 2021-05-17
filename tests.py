@@ -6,8 +6,6 @@ from shutil import copyfile
 import sys
 import importlib
 lichess_bot = importlib.import_module("lichess-bot")
-print(sys.version_info)
-print(sys.platform)
 
 
 def test_nothing():
@@ -72,6 +70,10 @@ def test_bot():
     logging_level = lichess_bot.logging.INFO  # lichess_bot.logging_level.DEBUG
     lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
     lichess_bot.enable_color_logging(debug_lvl=logging_level)
+    lichess_bot.logger.info(str(sys.version_info))
+    lichess_bot.logger.info(str(sys.platform))
+    print(sys.version_info)
+    print(sys.platform)
     download_sf()
     lichess_bot.logger.info("Downloaded SF")
     CONFIG = {'token': 'INSERT TOKEN HERE', 'url': 'https://lichess.org/', 'engine': {'dir': '.', 'name': 'sf.exe', 'protocol': 'uci', 'uci_ponder': True, 'polyglot': {'enabled': False}, 'uci_options': {'Move Overhead': 1000}, 'silence_stderr': False}, 'abort_time': 20, 'fake_think_time': False, 'move_overhead': 2000, 'challenge': {'concurrency': 0, 'sort_by': 'best', 'accept_bot': False, 'only_bot': False, 'max_increment': 180, 'min_increment': 0, 'max_base': 600, 'min_base': 0, 'variants': ['standard'], 'time_controls': ['bullet', 'blitz'], 'modes': ['casual', 'rated']}}
