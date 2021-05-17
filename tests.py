@@ -6,6 +6,8 @@ from shutil import copyfile
 import sys
 import importlib
 lichess_bot = importlib.import_module("lichess-bot")
+print(sys.version_info)
+print(sys.platform)
 
 
 def test_nothing():
@@ -34,8 +36,6 @@ def run_bot(CONFIG, logging_level):
         is_bot = lichess_bot.upgrade_account(li)
 
     if is_bot:
-        print(sys.version_info)
-        print(sys.platform)
         engine_factory = lichess_bot.partial(lichess_bot.engine_wrapper.create_engine, CONFIG)
         games = li.current_games()['nowPlaying']
         game_ids = list(map(lambda game: game['gameId'], games))
