@@ -8,7 +8,7 @@ from shutil import copyfile
 import importlib
 lichess_bot = importlib.import_module("lichess-bot")
 
-TOKEN = 'INSERT TOKEN HERE'
+TOKEN = 'mZnkopRGcYJDmI5f'
 
 
 def download_sf():
