@@ -17,12 +17,11 @@ shutil.copyfile('./test/lichess.py', 'lichess.py')
 lichess_bot = importlib.import_module("lichess-bot")
 
 platform = sys.platform
-assert platform == 'linux' or platform == 'win32'
 file_extension = '.exe' if platform == 'win32' else ''
-windows_or_linux = 'win' if platform == 'win32' else 'linux'
 
 
 def download_sf():
+    windows_or_linux = 'win' if platform == 'win32' else 'linux'
     response = requests.get(f'https://stockfishchess.org/files/stockfish_14.1_{windows_or_linux}_x64.zip', allow_redirects=True)
     with open('./TEMP/sf_zip.zip', 'wb') as file:
         file.write(response.content)
@@ -37,7 +36,27 @@ def download_sf():
         os.chmod(f'./TEMP/sf2{file_extension}', st.st_mode | stat.S_IEXEC)
 
 
-def run_bot(CONFIG, logging_level):
+def download_lc0():
+    response = requests.get('https://github.com/LeelaChessZero/lc0/releases/download/v0.28.2/lc0-v0.28.2-windows-cpu-dnnl.zip', allow_redirects=True)
+    with open('./TEMP/lc0_zip.zip', 'wb') as file:
+        file.write(response.content)
+    with zipfile.ZipFile('./TEMP/lc0_zip.zip', 'r') as zip_ref:
+        zip_ref.extractall('./TEMP/')
+
+
+def download_phalanx():
+    response = requests.get('https://downloads.sourceforge.net/project/phalanx/JA/phalanx-xxiii-ja.zip?ts=gAAAAABh_ATo2hcqeRNAKLrocqRfBbBGQoeZXX4cdXHja6-ElccQ-ctZRQSYGRtT_RnaPkr7HQUd8w4yvI-1u_B-JMRqVpv_BA%3D%3D&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fphalanx%2Ffiles%2FJA%2Fphalanx-xxiii-ja.zip%2Fdownload', allow_redirects=True)
+    with open('phalanx_zip.zip', 'wb') as file:
+        file.write(response.content)
+    with zipfile.ZipFile('phalanx_zip.zip', 'r') as zip_ref:
+        zip_ref.extractall('./TEMP/')
+    if platform == 'win32':
+        shutil.copyfile(f'./TEMP/phalanx-xxiii-ja/Windows/phalanx-xxiii-32-ja/phalanx-xxiii-32-ja.exe', './TEMP/phalanx.exe')
+    else:
+        shutil.copyfile(f'./TEMP/phalanx-xxiii-ja/Linux/phalanx xxiii 32 ja/phalanx-xxiii-32-ja', './TEMP/phalanx')
+
+
+def run_bot(CONFIG, logging_level, stockfish_path):
     lichess_bot.logger.info(lichess_bot.intro())
     li = lichess_bot.lichess.Lichess(CONFIG["token"], CONFIG["url"], lichess_bot.__version__)
 
@@ -56,6 +75,8 @@ def run_bot(CONFIG, logging_level):
 
             def thread_for_test():
                 open('./logs/events.txt', 'w').close()
+                open('./logs/states.txt', 'w').close()
+                open('./logs/result.txt', 'w').close()
 
                 start_time = 10
                 increment = 0.1
@@ -67,7 +88,7 @@ def run_bot(CONFIG, logging_level):
                 with open('./logs/states.txt', 'w') as file:
                     file.write(f'\n{wtime},{btime}')
 
-                engine = chess.engine.SimpleEngine.popen_uci(f'./TEMP/sf2{file_extension}')
+                engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
                 engine.configure({'Skill Level': 0, 'Move Overhead': 1000})
 
                 while True:
@@ -121,7 +142,8 @@ def run_bot(CONFIG, logging_level):
 
                 engine.quit()
                 win = board.is_checkmate() and board.turn == chess.WHITE
-                assert win
+                with open('./logs/result.txt', 'w') as file:
+                    file.write('1' if win else '0')
             
             thr = threading.Thread(target=thread_for_test)
             thr.start()
@@ -130,12 +152,19 @@ def run_bot(CONFIG, logging_level):
 
         run_test()
 
+        with open('./logs/result.txt') as file:
+            data = file.read()
+        return data
+
     else:
         lichess_bot.logger.error("{} is not a bot account. Please upgrade it to a bot account!".format(user_profile["username"]))
 
 
 @pytest.mark.timeout(150)
-def test_bot():
+def test_sf():
+    if platform != 'linux' and platform != 'win32':
+        assert True
+        return
     if os.path.exists('TEMP'):
         shutil.rmtree('TEMP')
     os.mkdir('TEMP')
@@ -153,14 +182,76 @@ def test_bot():
     CONFIG['engine']['dir'] = './TEMP/'
     CONFIG['engine']['name'] = f'sf{file_extension}'
     CONFIG['engine']['uci_options']['Threads'] = 1
-    run_bot(CONFIG, logging_level)
+    stockfish_path = f'./TEMP/sf2{file_extension}'
+    win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
-    try:
-        shutil.copyfile('correct_lichess.py', 'lichess.py')
-        os.remove('correct_lichess.py')
-    except Exception:
-        pass
+    lichess_bot.logger.info("Finished Testing SF")
+    assert win
+
+
+@pytest.mark.timeout(150)
+def test_lc0():
+    if platform != 'win32':
+        assert True
+        return
+    if os.path.exists('TEMP'):
+        shutil.rmtree('TEMP')
+    os.mkdir('TEMP')
+    if os.path.exists('logs'):
+        shutil.rmtree('logs')
+    os.mkdir('logs')
+    logging_level = lichess_bot.logging.INFO  # lichess_bot.logging_level.DEBUG
+    lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
+    lichess_bot.enable_color_logging(debug_lvl=logging_level)
+    download_sf()
+    download_lc0()
+    lichess_bot.logger.info("Downloaded LC0 and SF")
+    with open("./config.yml.default") as file:
+        CONFIG = yaml.safe_load(file)
+    CONFIG['token'] = ''
+    CONFIG['engine']['dir'] = './TEMP/'
+    CONFIG['engine']['name'] = 'lc0.exe'
+    CONFIG['engine']['uci_options']['Threads'] = 1
+    CONFIG['engine']['uci_options'].pop('Hash', None)
+    CONFIG['engine']['uci_options'].pop('Move Overhead', None)
+    stockfish_path = './TEMP/sf2.exe'
+    win = run_bot(CONFIG, logging_level, stockfish_path)
+    shutil.rmtree('TEMP')
+    lichess_bot.logger.info("Finished Testing LC0")
+    assert win
+
+
+@pytest.mark.timeout(150)
+def test_phalanx():
+    if platform != 'linux' and platform != 'win32':
+        assert True
+        return
+    if os.path.exists('TEMP'):
+        shutil.rmtree('TEMP')
+    os.mkdir('TEMP')
+    if os.path.exists('logs'):
+        shutil.rmtree('logs')
+    os.mkdir('logs')
+    logging_level = lichess_bot.logging.INFO  # lichess_bot.logging_level.DEBUG
+    lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
+    lichess_bot.enable_color_logging(debug_lvl=logging_level)
+    download_sf()
+    download_phalanx()
+    lichess_bot.logger.info("Downloaded Phalanx and SF")
+    with open("./config.yml.default") as file:
+        CONFIG = yaml.safe_load(file)
+    CONFIG['token'] = ''
+    CONFIG['engine']['dir'] = './TEMP/'
+    CONFIG['engine']['protocol'] = 'xboard'
+    CONFIG['engine']['name'] = f'phalanx{file_extension}'
+    stockfish_path = f'./TEMP/sf2{file_extension}'
+    win = run_bot(CONFIG, logging_level, stockfish_path)
+    shutil.rmtree('TEMP')
+    lichess_bot.logger.info("Finished Testing Phalanx")
+    assert win
 
 
 if __name__ == '__main__':
-    test_bot()
+    test_sf()
+    test_lc0()
+    test_phalanx()
