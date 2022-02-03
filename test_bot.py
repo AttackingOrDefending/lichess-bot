@@ -1,6 +1,7 @@
 import pytest
 import pytest_timeout
 import zipfile
+import tarfile
 import requests
 import time
 import yaml
@@ -18,6 +19,11 @@ lichess_bot = importlib.import_module("lichess-bot")
 
 platform = sys.platform
 file_extension = '.exe' if platform == 'win32' else ''
+
+
+def pytest_sessionfinish(session, exitstatus):
+    shutil.copyfile('correct_lichess.py', 'lichess.py')
+    os.remove('correct_lichess.py')
 
 
 def download_sf():
@@ -44,16 +50,22 @@ def download_lc0():
         zip_ref.extractall('./TEMP/')
 
 
-def download_phalanx():
-    response = requests.get('https://downloads.sourceforge.net/project/phalanx/JA/phalanx-xxiii-ja.zip?ts=gAAAAABh_ATo2hcqeRNAKLrocqRfBbBGQoeZXX4cdXHja6-ElccQ-ctZRQSYGRtT_RnaPkr7HQUd8w4yvI-1u_B-JMRqVpv_BA%3D%3D&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fphalanx%2Ffiles%2FJA%2Fphalanx-xxiii-ja.zip%2Fdownload', allow_redirects=True)
-    with open('phalanx_zip.zip', 'wb') as file:
-        file.write(response.content)
-    with zipfile.ZipFile('phalanx_zip.zip', 'r') as zip_ref:
-        zip_ref.extractall('./TEMP/')
+def download_arasan():
     if platform == 'win32':
-        shutil.copyfile(f'./TEMP/phalanx-xxiii-ja/Windows/phalanx-xxiii-32-ja/phalanx-xxiii-32-ja.exe', './TEMP/phalanx.exe')
+        response = requests.get('https://arasanchess.org/arasan23.2.zip', allow_redirects=True)
+        with open('arasan_zip.zip', 'wb') as file:
+            file.write(response.content)
+        with zipfile.ZipFile('arasan_zip.zip', 'r') as zip_ref:
+            zip_ref.extractall('./TEMP/')
+        shutil.copyfile('./TEMP/arasanx-64.exe', './TEMP/arasan.exe')
     else:
-        shutil.copyfile(f'./TEMP/phalanx-xxiii-ja/Linux/phalanx xxiii 32 ja/phalanx-xxiii-32-ja', './TEMP/phalanx')
+        response = requests.get('https://arasanchess.org/arasan-linux-binaries-23.2.tar.gz', allow_redirects=True)
+        with open('arasan.tar.gz', 'wb') as file:
+            file.write(response.content)
+        tar = tarfile.open('arasan.tar.gz', "r:gz")
+        tar.extractall('./TEMP/')
+        tar.close()
+        shutil.copyfile('./TEMP/arasanx-64', './TEMP/arasan')
 
 
 def run_bot(CONFIG, logging_level, stockfish_path):
@@ -185,6 +197,7 @@ def test_sf():
     stockfish_path = f'./TEMP/sf2{file_extension}'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
+    shutil.rmtree('logs')
     lichess_bot.logger.info("Finished Testing SF")
     assert win
 
@@ -217,12 +230,13 @@ def test_lc0():
     stockfish_path = './TEMP/sf2.exe'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
+    shutil.rmtree('logs')
     lichess_bot.logger.info("Finished Testing LC0")
     assert win
 
 
 @pytest.mark.timeout(150)
-def test_phalanx():
+def test_arasan():
     if platform != 'linux' and platform != 'win32':
         assert True
         return
@@ -236,22 +250,23 @@ def test_phalanx():
     lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
     lichess_bot.enable_color_logging(debug_lvl=logging_level)
     download_sf()
-    download_phalanx()
-    lichess_bot.logger.info("Downloaded Phalanx and SF")
+    download_arasan()
+    lichess_bot.logger.info("Downloaded Arasan and SF")
     with open("./config.yml.default") as file:
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
     CONFIG['engine']['protocol'] = 'xboard'
-    CONFIG['engine']['name'] = f'phalanx{file_extension}'
+    CONFIG['engine']['name'] = f'arasan{file_extension}'
     stockfish_path = f'./TEMP/sf2{file_extension}'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
-    lichess_bot.logger.info("Finished Testing Phalanx")
+    shutil.rmtree('logs')
+    lichess_bot.logger.info("Finished Testing Arasan")
     assert win
 
 
 if __name__ == '__main__':
     test_sf()
     test_lc0()
-    test_phalanx()
+    test_arasan()
