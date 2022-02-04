@@ -60,7 +60,7 @@ def download_marvin():
     for index, line in enumerate(data):
         if line.startswith('SYZYGY_PATH'):
             data[index] = 'SYZYGY_PATH=""'
-    with open('./TEMP/marvin.ini') as file:
+    with open('./TEMP/marvin.ini', 'w') as file:
         file.write('\n'.join(data))
     if windows_or_linux == "linux":
         st = os.stat(f'./TEMP/marvin{file_extension}')
