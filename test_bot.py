@@ -13,7 +13,7 @@ import stat
 import shutil
 import importlib
 shutil.copyfile('lichess.py', 'correct_lichess.py')
-shutil.copyfile('test_bot/lichess.py', 'lichess.py')
+shutil.copyfile('test/lichess.py', 'lichess.py')
 lichess_bot = importlib.import_module("lichess-bot")
 
 platform = sys.platform
@@ -97,7 +97,7 @@ def run_bot(CONFIG, logging_level, stockfish_path):
                             move = engine.play(board, chess.engine.Limit(time=1), ponder=False)
                         else:
                             start_time = time.perf_counter_ns()
-                            move = engine.play(board, chess.engine.Limit(white_clock=wtime - 2, white_inc=2), ponder=False)
+                            move = engine.play(board, chess.engine.Limit(white_clock=wtime - 2, white_inc=increment), ponder=False)
                             end_time = time.perf_counter_ns()
                             wtime -= (end_time - start_time) / 1e9
                             wtime += increment
@@ -139,7 +139,7 @@ def run_bot(CONFIG, logging_level, stockfish_path):
                 win = board.is_checkmate() and board.turn == chess.WHITE
                 with open('./logs/result.txt', 'w') as file:
                     file.write('1' if win else '0')
-            
+
             thr = threading.Thread(target=thread_for_test)
             thr.start()
             lichess_bot.start(li, user_profile, engine_factory, CONFIG, logging_level, None, one_game=True)
