@@ -1,7 +1,6 @@
 import pytest
 import pytest_timeout
 import zipfile
-import tarfile
 import requests
 import time
 import yaml
@@ -14,16 +13,11 @@ import stat
 import shutil
 import importlib
 shutil.copyfile('lichess.py', 'correct_lichess.py')
-shutil.copyfile('./test/lichess.py', 'lichess.py')
+shutil.copyfile('test/lichess.py', 'lichess.py')
 lichess_bot = importlib.import_module("lichess-bot")
 
 platform = sys.platform
 file_extension = '.exe' if platform == 'win32' else ''
-
-
-def pytest_sessionfinish(session, exitstatus):
-    shutil.copyfile('correct_lichess.py', 'lichess.py')
-    os.remove('correct_lichess.py')
 
 
 def download_sf():
@@ -50,22 +44,14 @@ def download_lc0():
         zip_ref.extractall('./TEMP/')
 
 
-def download_arasan():
-    if platform == 'win32':
-        response = requests.get('https://arasanchess.org/arasan23.2.zip', allow_redirects=True)
-        with open('arasan_zip.zip', 'wb') as file:
-            file.write(response.content)
-        with zipfile.ZipFile('arasan_zip.zip', 'r') as zip_ref:
-            zip_ref.extractall('./TEMP/')
-        shutil.copyfile('./TEMP/arasanx-64.exe', './TEMP/arasan.exe')
-    else:
-        response = requests.get('https://arasanchess.org/arasan-linux-binaries-23.2.tar.gz', allow_redirects=True)
-        with open('arasan.tar.gz', 'wb') as file:
-            file.write(response.content)
-        tar = tarfile.open('arasan.tar.gz', "r:gz")
-        tar.extractall('./TEMP/')
-        tar.close()
-        shutil.copyfile('./TEMP/arasanx-64', './TEMP/arasan')
+def download_marvin():
+    windows_or_linux = 'windows' if platform == 'win32' else 'linux'
+    response = requests.get('https://github.com/bmdanielsson/marvin-chess/releases/download/v5.2.0/marvin_5.2.0_binaries.zip', allow_redirects=True)
+    with open('marvin_zip.zip', 'wb') as file:
+        file.write(response.content)
+    with zipfile.ZipFile('marvin_zip.zip', 'r') as zip_ref:
+        zip_ref.extractall('./TEMP/')
+    shutil.copyfile(f'./TEMP/marvin_5.2.0_binaries/{windows_or_linux}/marvin_x86_64_modern{file_extension}', f'./TEMP/marvin{file_extension}')
 
 
 def run_bot(CONFIG, logging_level, stockfish_path):
@@ -236,7 +222,7 @@ def test_lc0():
 
 
 @pytest.mark.timeout(150)
-def test_arasan():
+def test_marvin():
     if platform != 'linux' and platform != 'win32':
         assert True
         return
@@ -250,23 +236,23 @@ def test_arasan():
     lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
     lichess_bot.enable_color_logging(debug_lvl=logging_level)
     download_sf()
-    download_arasan()
-    lichess_bot.logger.info("Downloaded Arasan and SF")
+    download_marvin()
+    lichess_bot.logger.info("Downloaded Marvin and SF")
     with open("./config.yml.default") as file:
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
     CONFIG['engine']['protocol'] = 'xboard'
-    CONFIG['engine']['name'] = f'arasan{file_extension}'
+    CONFIG['engine']['name'] = f'marvin{file_extension}'
     stockfish_path = f'./TEMP/sf2{file_extension}'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
     shutil.rmtree('logs')
-    lichess_bot.logger.info("Finished Testing Arasan")
+    lichess_bot.logger.info("Finished Testing Marvin")
     assert win
 
 
 if __name__ == '__main__':
     test_sf()
     test_lc0()
-    test_arasan()
+    test_marvin()
