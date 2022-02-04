@@ -44,27 +44,13 @@ def download_lc0():
         zip_ref.extractall('./TEMP/')
 
 
-def download_marvin():
-    windows_or_linux = 'windows' if platform == 'win32' else 'linux'
-    response = requests.get('https://github.com/bmdanielsson/marvin-chess/releases/download/v5.2.0/marvin_5.2.0_binaries.zip', allow_redirects=True)
-    with open('marvin_zip.zip', 'wb') as file:
+def download_phalanx():
+    response = requests.get('https://downloads.sourceforge.net/project/phalanx/Version%20XXV/phalanx-XXV-win32.zip?ts=gAAAAABgr-6M3kVBN-ad3au29eJRtJQV50iQZk1tta24jX-ircxPQFmO3i5tnP92JFOLrjsLUcNFwly4sNxw-R05jnHd1oEIJA%3D%3D&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fphalanx%2Ffiles%2Flatest%2Fdownload', allow_redirects=True)
+    with open('phalanx_zip.zip', 'wb') as file:
         file.write(response.content)
-    with zipfile.ZipFile('marvin_zip.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('phalanx_zip.zip', 'r') as zip_ref:
         zip_ref.extractall('./TEMP/')
-    shutil.copyfile(f'./TEMP/marvin_5.2.0_binaries/{windows_or_linux}/marvin_x86_64_modern{file_extension}', f'./TEMP/marvin{file_extension}')
-    shutil.copyfile('./TEMP/marvin_5.2.0_binaries/net-422c365.nnue', './TEMP/net-422c365.nnue')
-    shutil.copyfile('./TEMP/marvin_5.2.0_binaries/marvin.ini', './TEMP/marvin.ini')
-    shutil.copyfile('./TEMP/marvin_5.2.0_binaries/book.bin', './TEMP/book.bin')
-    with open('./TEMP/marvin.ini') as file:
-        data = file.read().split('\n')
-    for index, line in enumerate(data):
-        if line.startswith('SYZYGY_PATH'):
-            data[index] = 'SYZYGY_PATH=""'
-    with open('./TEMP/marvin.ini', 'w') as file:
-        file.write('\n'.join(data))
-    if windows_or_linux == "linux":
-        st = os.stat(f'./TEMP/marvin{file_extension}')
-        os.chmod(f'./TEMP/marvin{file_extension}', st.st_mode | stat.S_IEXEC)
+    shutil.copyfile('./TEMP/Phalanx_XXV_Win32/phalanx25.exe', './TEMP/phalanx.exe')
 
 
 def run_bot(CONFIG, logging_level, stockfish_path):
@@ -235,8 +221,8 @@ def test_lc0():
 
 
 @pytest.mark.timeout(150)
-def test_marvin():
-    if platform != 'linux' and platform != 'win32':
+def test_phalanx():
+    if platform != 'win32':
         assert True
         return
     if os.path.exists('TEMP'):
@@ -249,23 +235,24 @@ def test_marvin():
     lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
     lichess_bot.enable_color_logging(debug_lvl=logging_level)
     download_sf()
-    download_marvin()
-    lichess_bot.logger.info("Downloaded Marvin and SF")
+    download_phalanx()
+    lichess_bot.logger.info("Downloaded Phalanx and SF")
     with open("./config.yml.default") as file:
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
     CONFIG['engine']['protocol'] = 'xboard'
-    CONFIG['engine']['name'] = f'marvin{file_extension}'
-    stockfish_path = f'./TEMP/sf2{file_extension}'
+    CONFIG['engine']['name'] = 'phalanx.exe'
+    CONFIG['engine']['ponder'] = False
+    stockfish_path = './TEMP/sf2.exe'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
     shutil.rmtree('logs')
-    lichess_bot.logger.info("Finished Testing Marvin")
+    lichess_bot.logger.info("Finished Testing Phalanx")
     assert win
 
 
 if __name__ == '__main__':
     test_sf()
     test_lc0()
-    test_marvin()
+    test_phalanx()
