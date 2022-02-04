@@ -52,6 +52,19 @@ def download_marvin():
     with zipfile.ZipFile('marvin_zip.zip', 'r') as zip_ref:
         zip_ref.extractall('./TEMP/')
     shutil.copyfile(f'./TEMP/marvin_5.2.0_binaries/{windows_or_linux}/marvin_x86_64_modern{file_extension}', f'./TEMP/marvin{file_extension}')
+    shutil.copyfile('./TEMP/marvin_5.2.0_binaries/net-422c365.nnue', './TEMP/net-422c365.nnue')
+    shutil.copyfile('./TEMP/marvin_5.2.0_binaries/marvin.ini', './TEMP/marvin.ini')
+    shutil.copyfile('./TEMP/marvin_5.2.0_binaries/book.bin', './TEMP/book.bin')
+    with open('./TEMP/marvin.ini') as file:
+        data = file.read().split('\n')
+    for index, line in enumerate(data):
+        if line.startswith('SYZYGY_PATH'):
+            data[index] = 'SYZYGY_PATH=""'
+    with open('./TEMP/marvin.ini') as file:
+        file.write('\n'.join(data))
+    if windows_or_linux == "linux":
+        st = os.stat(f'./TEMP/marvin{file_extension}')
+        os.chmod(f'./TEMP/marvin{file_extension}', st.st_mode | stat.S_IEXEC)
 
 
 def run_bot(CONFIG, logging_level, stockfish_path):
