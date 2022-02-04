@@ -244,6 +244,7 @@ def test_phalanx():
     CONFIG['engine']['dir'] = './TEMP/'
     CONFIG['engine']['protocol'] = 'xboard'
     CONFIG['engine']['name'] = f'phalanx{file_extension}'
+    CONFIG['engine']['ponder'] = False
     stockfish_path = f'./TEMP/sf2{file_extension}'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
