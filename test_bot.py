@@ -44,11 +44,13 @@ def download_lc0():
         zip_ref.extractall('./TEMP/')
 
 
-def download_minic():
-    windows_or_linux = 'mingw' if platform == 'win32' else 'linux'
-    response = requests.get(f'https://github.com/tryingsomestuff/Minic-Dist/raw/master/Minic3/minic_3.18_{windows_or_linux}_x64_athlon64-sse3{file_extension}', allow_redirects=True)
-    with open(f'./TEMP/minic{file_extension}', 'wb') as file:
+def download_sjeng():
+    response = requests.get('https://sjeng.org/ftp/Sjeng112.zip', allow_redirects=True)
+    with open('./TEMP/sjeng_zip.zip', 'wb') as file:
         file.write(response.content)
+    with zipfile.ZipFile('./TEMP/sjeng_zip.zip', 'r') as zip_ref:
+        zip_ref.extractall('./TEMP/')
+    shutil.copyfile(f'./TEMP/Release/Sjeng112.exe', f'./TEMP/sjeng.exe')
 
 
 def run_bot(CONFIG, logging_level, stockfish_path):
@@ -219,8 +221,8 @@ def test_lc0():
 
 
 @pytest.mark.timeout(150)
-def test_minic():
-    if platform != 'linux' and platform != 'win32':
+def test_sjeng():
+    if platform != 'win32':
         assert True
         return
     if os.path.exists('TEMP'):
@@ -233,24 +235,24 @@ def test_minic():
     lichess_bot.logging.basicConfig(level=logging_level, filename=None, format="%(asctime)-15s: %(message)s")
     lichess_bot.enable_color_logging(debug_lvl=logging_level)
     download_sf()
-    download_minic()
-    lichess_bot.logger.info("Downloaded Minic and SF")
+    download_sjeng()
+    lichess_bot.logger.info("Downloaded Sjeng and SF")
     with open("./config.yml.default") as file:
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
     CONFIG['engine']['protocol'] = 'xboard'
-    CONFIG['engine']['name'] = f'minic{file_extension}'
+    CONFIG['engine']['name'] = 'sjeng.exe'
     CONFIG['engine']['ponder'] = False
-    stockfish_path = f'./TEMP/sf2{file_extension}'
+    stockfish_path = './TEMP/sf2.exe'
     win = run_bot(CONFIG, logging_level, stockfish_path)
     shutil.rmtree('TEMP')
     shutil.rmtree('logs')
-    lichess_bot.logger.info("Finished Testing Minic")
+    lichess_bot.logger.info("Finished Testing Sjeng")
     assert win
 
 
 if __name__ == '__main__':
     test_sf()
     test_lc0()
-    test_minic()
+    test_sjeng()
