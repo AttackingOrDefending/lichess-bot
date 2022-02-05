@@ -177,7 +177,7 @@ def test_sf():
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
-    CONFIG['enigne']['working_dir'] = './TEMP/'
+    CONFIG['engine']['working_dir'] = './TEMP/'
     CONFIG['engine']['name'] = f'sf{file_extension}'
     CONFIG['engine']['uci_options']['Threads'] = 1
     stockfish_path = f'./TEMP/sf2{file_extension}'
@@ -209,7 +209,7 @@ def test_lc0():
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
-    CONFIG['enigne']['working_dir'] = './TEMP/'
+    CONFIG['engine']['working_dir'] = './TEMP/'
     CONFIG['engine']['name'] = 'lc0.exe'
     CONFIG['engine']['uci_options']['Threads'] = 1
     CONFIG['engine']['uci_options'].pop('Hash', None)
@@ -243,7 +243,7 @@ def test_sjeng():
         CONFIG = yaml.safe_load(file)
     CONFIG['token'] = ''
     CONFIG['engine']['dir'] = './TEMP/'
-    CONFIG['enigne']['working_dir'] = './TEMP/'
+    CONFIG['engine']['working_dir'] = './TEMP/'
     CONFIG['engine']['protocol'] = 'xboard'
     CONFIG['engine']['name'] = 'sjeng.exe'
     CONFIG['engine']['ponder'] = False
