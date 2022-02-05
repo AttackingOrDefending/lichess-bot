@@ -79,21 +79,20 @@ def run_bot(CONFIG, logging_level, stockfish_path):
         engine_factory = lichess_bot.partial(lichess_bot.engine_wrapper.create_engine, CONFIG)
 
         def run_test():
+            open('./logs/events.txt', 'w').close()
+            open('./logs/states.txt', 'w').close()
+            open('./logs/result.txt', 'w').close()
+
+            start_time = 10
+            increment = 0.1
+            
+            with open('./logs/states.txt', 'w') as file:
+                    file.write(f'\n{start_time},{start_time}')
 
             def thread_for_test():
-                open('./logs/events.txt', 'w').close()
-                open('./logs/states.txt', 'w').close()
-                open('./logs/result.txt', 'w').close()
-
-                start_time = 10
-                increment = 0.1
-
                 board = chess.Board()
                 wtime = start_time
                 btime = start_time
-
-                with open('./logs/states.txt', 'w') as file:
-                    file.write(f'\n{wtime},{btime}')
 
                 engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
                 engine.configure({'Skill Level': 0, 'Move Overhead': 1000})
