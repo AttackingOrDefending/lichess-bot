@@ -34,6 +34,7 @@ def download_sf():
         os.chmod(f'./TEMP/sf{file_extension}', st.st_mode | stat.S_IEXEC)
         st = os.stat(f'./TEMP/sf2{file_extension}')
         os.chmod(f'./TEMP/sf2{file_extension}', st.st_mode | stat.S_IEXEC)
+        time.sleep(1)
 
 
 def download_lc0():
