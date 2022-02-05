@@ -89,7 +89,7 @@ def run_bot(CONFIG, logging_level, stockfish_path):
             with open('./logs/states.txt', 'w') as file:
                     file.write(f'\n{start_time},{start_time}')
 
-            def thread_for_test():
+            def thread_for_test(start_time=start_time):
                 board = chess.Board()
                 wtime = start_time
                 btime = start_time
