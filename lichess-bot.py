@@ -290,6 +290,7 @@ def play_game(li, game_id, control_queue, engine_factory, user_profile, config, 
                     fake_thinking(config, board, game)
                     print_move_number(board)
                     correspondence_disconnect_time = correspondence_cfg.get("disconnect_time", 300)
+                    time.sleep(200)
 
                     best_move = get_book_move(board, polyglot_cfg)
                     if best_move.move is None:
