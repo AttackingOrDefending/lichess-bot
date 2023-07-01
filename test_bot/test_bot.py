@@ -28,6 +28,8 @@ stockfish_path = f"./TEMP/sf{file_extension}"
 def download_sf() -> None:
     """Download Stockfish 15."""
     if os.path.exists(stockfish_path):
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            print("success=true", file=fh)
         return
     windows_or_linux = "win" if platform == "win32" else "linux"
     base_name = f"stockfish_15_{windows_or_linux}_x64"
