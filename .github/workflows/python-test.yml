@@ -41,7 +41,7 @@ jobs:
     - name: Test with pytest
       id: pytest
       run: |
-        pytest
+        pytest --log-cli-level=10
     - name: Used
       if: steps.pytest.outputs.used != '1'
       run: |
