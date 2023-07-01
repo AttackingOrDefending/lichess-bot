@@ -39,8 +39,12 @@ jobs:
       if: steps.cache-temp-restore.outputs.cache-hit != 'true'
       run: echo "FAIL"
     - name: Test with pytest
+      id: pytest
       run: |
         pytest
+    - name: Used
+      if: steps.pytest.outputs.success != 'true'
+      run: echo "FAIL2"
     - name: Save engines
       id: cache-temp-save
       uses: actions/cache/save@v3
