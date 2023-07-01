@@ -36,7 +36,9 @@ jobs:
           TEMP
         key: ${{ matrix.os }}-engines
     - name: Stored
-      run: echo ${{ steps.cache-temp-restore.outputs.cache-hit }}
+      run: |
+        SUCCESS = ${{ steps.cache-temp-restore.outputs.cache-hit }}
+        echo "$SUCCESS"
     - name: Test with pytest
       run: |
         pytest
