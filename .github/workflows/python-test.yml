@@ -43,7 +43,7 @@ jobs:
       run: |
         pytest
     - name: Used
-      if: steps.pytest.outputs.success != 'true'
+      if: steps.pytest.outputs.used != '1'
       run: echo "FAIL2"
     - name: Save engines
       id: cache-temp-save
