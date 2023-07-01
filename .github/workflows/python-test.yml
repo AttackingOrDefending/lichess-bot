@@ -5,7 +5,7 @@ name: Python Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, test ]
   pull_request:
     branches: [ master ]
 
@@ -35,6 +35,8 @@ jobs:
         path: |
           TEMP
         key: ${{ matrix.os }}-engines
+    - name: Stored
+      run: echo ${{ steps.cache-temp-restore.outputs.cache-hit }}
     - name: Test with pytest
       run: |
         pytest
