@@ -2,7 +2,7 @@
 import logging
 import chess
 import test_bot.lichess
-from fen_generator import generate_odds_fen
+from lib.fen_generator import generate_odds_fen
 from lib import model
 from lib.engine_wrapper import EngineWrapper
 from lib import lichess

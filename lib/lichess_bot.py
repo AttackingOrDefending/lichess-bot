@@ -30,7 +30,7 @@ from lib.conversation import Conversation, ChatLine
 from lib.timer import Timer, seconds, msec, hours, to_seconds
 from lib.lichess_types import (UserProfileType, EventType, GameType, GameEventType, CONTROL_QUEUE_TYPE,
                                CORRESPONDENCE_QUEUE_TYPE, LOGGING_QUEUE_TYPE, PGN_QUEUE_TYPE)
-from fen_generator import generate_odds_fen, get_expected_elo, MAX_VARIATION
+from lib.fen_generator import generate_odds_fen, get_expected_elo, MAX_VARIATION
 from requests.exceptions import ChunkedEncodingError, ConnectionError, HTTPError, ReadTimeout
 from rich.logging import RichHandler
 from collections import defaultdict
@@ -698,7 +698,6 @@ def play_game(li: LICHESS_TYPE,
         game_stream = itertools.chain([json.dumps(game.state).encode("utf-8")], lines)
         quit_after_all_games_finish = config.quit_after_all_games_finish
         stay_in_game = True
-        end_time = Timer(seconds(10))
         say_hello(conversation, hello, hello_spectators, board, game)
         while stay_in_game and (not terminated or quit_after_all_games_finish) and not force_quit:
             move_attempted = False
@@ -737,7 +736,6 @@ def play_game(li: LICHESS_TYPE,
                         engine.send_game_result(game, board)
                         conversation.send_message("player", goodbye)
                         conversation.send_message("spectator", goodbye_spectators)
-                        end_time.reset()
                     elif (takeback_field
                             and not bot_to_move(game, board)
                             and li.accept_takeback(game.id, takebacks_accepted < max_takebacks_accepted)):
@@ -751,7 +749,7 @@ def play_game(li: LICHESS_TYPE,
                     game.ping(abort_time, terminate_time, disconnect_time)
                     prior_game = copy.deepcopy(game)
                 elif u_type == "ping" and should_exit_game(board, game, prior_game, li, is_correspondence):
-                    stay_in_game = end_time.is_expired()
+                    stay_in_game = False
             except (HTTPError, ReadTimeout, RemoteDisconnected, ChunkedEncodingError, ConnectionError, StopIteration) as e:
                 stopped = isinstance(e, StopIteration)
                 stay_in_game = not stopped and (move_attempted or game_is_active(li, game.id))
