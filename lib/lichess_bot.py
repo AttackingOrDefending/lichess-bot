@@ -30,6 +30,7 @@ from lib.conversation import Conversation, ChatLine
 from lib.timer import Timer, seconds, msec, hours, to_seconds
 from lib.lichess_types import (UserProfileType, EventType, GameType, GameEventType, CONTROL_QUEUE_TYPE,
                                CORRESPONDENCE_QUEUE_TYPE, LOGGING_QUEUE_TYPE, PGN_QUEUE_TYPE)
+from fen_generator import generate_odds_fen, get_expected_elo, MAX_VARIATION
 from requests.exceptions import ChunkedEncodingError, ConnectionError, HTTPError, ReadTimeout
 from rich.logging import RichHandler
 from collections import defaultdict
@@ -697,6 +698,8 @@ def play_game(li: LICHESS_TYPE,
         game_stream = itertools.chain([json.dumps(game.state).encode("utf-8")], lines)
         quit_after_all_games_finish = config.quit_after_all_games_finish
         stay_in_game = True
+        end_time = Timer(seconds(10))
+        say_hello(conversation, hello, hello_spectators, board, game)
         while stay_in_game and (not terminated or quit_after_all_games_finish) and not force_quit:
             move_attempted = False
             try:
@@ -710,27 +713,31 @@ def play_game(li: LICHESS_TYPE,
                     takeback_field = game.state.get("btakeback") if game.is_white else game.state.get("wtakeback")
 
                     if not is_game_over(game) and is_engine_move(game, prior_game, board):
-                        disconnect_time = correspondence_disconnect_time
-                        say_hello(conversation, hello, hello_spectators, board)
-                        setup_timer = Timer()
-                        print_move_number(board)
-                        move_attempted = True
-                        engine.play_move(board,
-                                         game,
-                                         li,
-                                         setup_timer,
-                                         move_overhead,
-                                         can_ponder,
-                                         is_correspondence,
-                                         correspondence_move_time,
-                                         engine_cfg,
-                                         fake_think_time(config, board, game))
-                        time.sleep(to_seconds(delay))
+                        if is_fen_elo_valid(game.initial_fen, game):
+                            disconnect_time = correspondence_disconnect_time
+                            setup_timer = Timer()
+                            print_move_number(board)
+                            move_attempted = True
+                            engine.play_move(board,
+                                             game,
+                                             li,
+                                             setup_timer,
+                                             move_overhead,
+                                             can_ponder,
+                                             is_correspondence,
+                                             correspondence_move_time,
+                                             engine_cfg,
+                                             fake_think_time(config, board, game))
+                            time.sleep(to_seconds(delay))
+                        else:
+                            expected_elo = get_expected_elo(game.initial_fen, chess.WHITE if game.is_white else chess.BLACK)
+                            conversation.send_message("player", f"This fen isn't valid for your ELO. Expected ELO: {expected_elo}")
                     elif is_game_over(game):
                         tell_user_game_result(game, board)
                         engine.send_game_result(game, board)
                         conversation.send_message("player", goodbye)
                         conversation.send_message("spectator", goodbye_spectators)
+                        end_time.reset()
                     elif (takeback_field
                             and not bot_to_move(game, board)
                             and li.accept_takeback(game.id, takebacks_accepted < max_takebacks_accepted)):
@@ -744,7 +751,7 @@ def play_game(li: LICHESS_TYPE,
                     game.ping(abort_time, terminate_time, disconnect_time)
                     prior_game = copy.deepcopy(game)
                 elif u_type == "ping" and should_exit_game(board, game, prior_game, li, is_correspondence):
-                    stay_in_game = False
+                    stay_in_game = end_time.is_expired()
             except (HTTPError, ReadTimeout, RemoteDisconnected, ChunkedEncodingError, ConnectionError, StopIteration) as e:
                 stopped = isinstance(e, StopIteration)
                 stay_in_game = not stopped and (move_attempted or game_is_active(li, game.id))
@@ -752,6 +759,12 @@ def play_game(li: LICHESS_TYPE,
         pgn_record = try_get_pgn_game_record(li, config, game, board, engine)
     final_queue_entries(control_queue, correspondence_queue, game, is_correspondence, pgn_record, pgn_queue)
     delete_takeback_record(game)
+
+
+def is_fen_elo_valid(fen: str, game: model.Game) -> bool:
+    """Check if the FEN and ELO are valid."""
+    expected_elo = get_expected_elo(fen, chess.WHITE if game.is_white else chess.BLACK)
+    return abs(expected_elo - game.opponent.rating) <= MAX_VARIATION
 
 
 def read_takeback_record(game: model.Game) -> int:
@@ -799,10 +812,13 @@ def get_greeting(greeting: str, greeting_cfg: Configuration, keyword_map: defaul
     return greeting_text.format_map(keyword_map)
 
 
-def say_hello(conversation: Conversation, hello: str, hello_spectators: str, board: chess.Board) -> None:
+def say_hello(conversation: Conversation, hello: str, hello_spectators: str, board: chess.Board, game: model.Game) -> None:
     """Send the greetings to the chat rooms."""
     if len(board.move_stack) < 2:
         conversation.send_message("player", hello)
+        fen, bot_color = generate_odds_fen(game.opponent.rating)
+        color = "White" if bot_color == chess.BLACK else "Black"
+        conversation.send_message("player", f"Suggested fen: {fen} Your color: {color}")
         conversation.send_message("spectator", hello_spectators)
 
 

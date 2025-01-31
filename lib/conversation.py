@@ -1,6 +1,8 @@
 """Allows lichess-bot to send messages to the chat."""
 import logging
+import chess
 import test_bot.lichess
+from fen_generator import generate_odds_fen
 from lib import model
 from lib.engine_wrapper import EngineWrapper
 from lib import lichess
@@ -89,6 +91,10 @@ class Conversation:
                 self.send_reply(line, f"Challenge queue: {challengers}")
             else:
                 self.send_reply(line, "No challenges queued.")
+        elif cmd == "generate" and line.room == "player":
+            fen, bot_color = generate_odds_fen(self.game.opponent.rating)
+            color = "White" if bot_color == chess.BLACK else "Black"
+            self.send_message("player", f"Suggested fen: {fen} Your color: {color}")
 
     def send_reply(self, line: ChatLine, reply: str) -> None:
         """
