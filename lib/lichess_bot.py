@@ -4,6 +4,7 @@ import chess
 import chess.pgn
 from chess.variant import find_variant
 from lib import engine_wrapper, model, lichess, matchmaking
+from lib.fen_generator import generate_odds_fen
 import json
 import logging
 import logging.handlers
@@ -76,6 +77,8 @@ __version__ = versioning_info["lichess_bot_version"]
 terminated = False
 force_quit = False
 restart = True
+
+challenges = {}
 
 
 def should_restart() -> bool:
@@ -420,6 +423,11 @@ def lichess_bot_main(li: lichess.Lichess,
             matchmaker.challenge(active_games, challenge_queue, max_games)
             check_online_status(li, user_profile, last_check_online_time)
 
+            for challenge_id in list(challenges.keys()):
+                if challenges[challenge_id] + 30 < time.time():
+                    li.cancel(challenge_id)
+                    challenges.pop(challenge_id)
+
             control_queue.task_done()
 
         close_pool(pool, active_games, config)
@@ -619,6 +627,18 @@ def handle_challenge(event: EventType, li: lichess.Lichess, challenge_queue: MUL
 
     is_supported, decline_reason = chlng.is_supported(challenge_config, recent_bot_challenges, players_with_active_games)
     if is_supported:
+        if chlng.variant == "standard":
+            fen, bot_color = generate_odds_fen(chlng.challenger.rating)
+            chlng_id = li.challenge(chlng.challenger.name, {"variant": "fromPosition", "fen": fen,
+                                                            "color": "white" if bot_color == chess.WHITE else 'black',
+                                                            "clock.limit": chlng.time_control.get("limit", 300),
+                                                            "clock.increment": chlng.time_control.get("increment", 0)}
+                                    ).get("id", "")
+            if chlng_id:
+                challenges[chlng_id] = time.time()
+
+            li.decline_challenge(chlng.id, reason="generic")
+            return
         challenge_queue.append(chlng)
         sort_challenges(challenge_queue, challenge_config)
         time_window = challenge_config.recent_bot_challenge_age
