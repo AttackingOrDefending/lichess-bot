@@ -4,6 +4,7 @@ import chess
 import chess.pgn
 from chess.variant import find_variant
 from lib import engine_wrapper, model, lichess, matchmaking
+from lib.fen_generator import generate_odds_fen
 import json
 import logging
 import logging.handlers
@@ -55,6 +56,7 @@ class PlayGameArgsType(TypedDict, total=False):
     logging_queue: LOGGING_QUEUE_TYPE
     pgn_queue: PGN_QUEUE_TYPE
     game_id: str
+    results_queue: PGN_QUEUE_TYPE
 
 
 class VersioningType(TypedDict):
@@ -76,6 +78,8 @@ __version__ = versioning_info["lichess_bot_version"]
 terminated = False
 force_quit = False
 restart = True
+
+challenges = {}
 
 
 def should_restart() -> bool:
@@ -288,6 +292,8 @@ def start(li: lichess.Lichess, user_profile: UserProfileType, config: Configurat
                                                  user_profile["username"]))
     pgn_listener.start()
 
+    results_queue = manager.Queue()
+
     thread_logging_configurer(logging_queue)
 
     try:
@@ -299,7 +305,8 @@ def start(li: lichess.Lichess, user_profile: UserProfileType, config: Configurat
                          correspondence_queue,
                          logging_queue,
                          pgn_queue,
-                         one_game)
+                         one_game,
+                         results_queue)
     finally:
         control_stream.terminate()
         control_stream.join()
@@ -332,7 +339,8 @@ def lichess_bot_main(li: lichess.Lichess,
                      correspondence_queue: CORRESPONDENCE_QUEUE_TYPE,
                      logging_queue: LOGGING_QUEUE_TYPE,
                      pgn_queue: PGN_QUEUE_TYPE,
-                     one_game: bool) -> None:
+                     one_game: bool,
+                     results_queue) -> None:
     """
     Handle all the games and challenges.
 
@@ -368,7 +376,7 @@ def lichess_bot_main(li: lichess.Lichess,
     play_game_args = PlayGameArgsType(li=li, control_queue=control_queue, user_profile=user_profile,
                                       config=config, challenge_queue=challenge_queue,
                                       correspondence_queue=correspondence_queue, logging_queue=logging_queue,
-                                      pgn_queue=pgn_queue)
+                                      pgn_queue=pgn_queue, results_queue=results_queue)
 
     recent_bot_challenges: defaultdict[str, list[Timer]] = defaultdict(list)
 
@@ -381,6 +389,12 @@ def lichess_bot_main(li: lichess.Lichess,
             event = next_event(control_queue)
             if not event:
                 continue
+
+            while not results_queue.empty():
+                opponent_name, bot_score = results_queue.get_nowait()
+                print(f"Adding result 2: {opponent_name} {bot_score}")
+                with open("results.txt", "a") as f:
+                    f.write(f"{opponent_name} {bot_score}\n")
 
             if event["type"] == "terminated":
                 restart = True
@@ -419,6 +433,11 @@ def lichess_bot_main(li: lichess.Lichess,
             accept_challenges(li, challenge_queue, active_games, max_games)
             matchmaker.challenge(active_games, challenge_queue, max_games)
             check_online_status(li, user_profile, last_check_online_time)
+
+            for challenge_id in list(challenges.keys()):
+                if challenges[challenge_id] + 30 < time.time():
+                    li.cancel(challenge_id)
+                    challenges.pop(challenge_id)
 
             control_queue.task_done()
 
@@ -619,6 +638,35 @@ def handle_challenge(event: EventType, li: lichess.Lichess, challenge_queue: MUL
 
     is_supported, decline_reason = chlng.is_supported(challenge_config, recent_bot_challenges, players_with_active_games)
     if is_supported:
+        if chlng.variant == "standard":
+            if not os.path.exists("results.txt"):
+                with open("results.txt", "w") as f:
+                    pass
+            with open("results.txt") as f:
+                results = f.read()
+            games = 0
+            bot_score = 0
+            for line in results.split("\n"):
+                if not line:
+                    continue
+                opponent_name, score = line.split()
+                if opponent_name == chlng.challenger.name:
+                    games += 1
+                    bot_score += int(score) / 2
+
+            initial_time = chlng.time_control.get("limit", 300)
+            increment = chlng.time_control.get("increment", 0)
+            fen, bot_color = generate_odds_fen(chlng.challenger.rating, games, bot_score, initial_time, increment)
+            chlng_id = li.challenge(chlng.challenger.name, {"variant": "fromPosition", "fen": fen,
+                                                            "color": "white" if bot_color == chess.WHITE else 'black',
+                                                            "clock.limit": initial_time,
+                                                            "clock.increment": increment}
+                                    ).get("id", "")
+            if chlng_id:
+                challenges[chlng_id] = time.time()
+
+            li.decline_challenge(chlng.id, reason="generic")
+            return
         challenge_queue.append(chlng)
         sort_challenges(challenge_queue, challenge_config)
         time_window = challenge_config.recent_bot_challenge_age
@@ -638,7 +686,8 @@ def play_game(li: lichess.Lichess,
               challenge_queue: MULTIPROCESSING_LIST_TYPE,
               correspondence_queue: CORRESPONDENCE_QUEUE_TYPE,
               logging_queue: LOGGING_QUEUE_TYPE,
-              pgn_queue: PGN_QUEUE_TYPE) -> None:
+              pgn_queue: PGN_QUEUE_TYPE,
+              results_queue) -> None:
     """
     Play a game.
 
@@ -727,6 +776,16 @@ def play_game(li: lichess.Lichess,
                         time.sleep(to_seconds(delay))
                     elif is_game_over(game):
                         tell_user_game_result(game, board)
+
+                        winner = game.state.get("winner")
+                        opponent_name = game.opponent.name
+                        bot_score = 1
+                        if winner is not None:
+                            winning_name = game.white.name if winner == "white" else game.black.name
+                            bot_score = (winning_name == user_profile["username"]) * 2
+                        results_queue.put_nowait((opponent_name, bot_score))
+                        print(f"Adding result: {opponent_name} {bot_score}")
+
                         engine.send_game_result(game, board)
                         conversation.send_message("player", goodbye)
                         conversation.send_message("spectator", goodbye_spectators)
