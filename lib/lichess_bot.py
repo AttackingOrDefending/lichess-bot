@@ -391,10 +391,9 @@ def lichess_bot_main(li: lichess.Lichess,
                 continue
 
             while not results_queue.empty():
-                opponent_name, bot_score = results_queue.get_nowait()
-                print(f"Adding result 2: {opponent_name} {bot_score}")
+                opponent_name, bot_score, initial_fen, bot_color = results_queue.get_nowait()
                 with open("results.txt", "a") as f:
-                    f.write(f"{opponent_name} {bot_score}\n")
+                    f.write(f"{opponent_name},{bot_score},{initial_fen},{bot_color}\n")
 
             if event["type"] == "terminated":
                 restart = True
@@ -649,7 +648,7 @@ def handle_challenge(event: EventType, li: lichess.Lichess, challenge_queue: MUL
             for line in results.split("\n"):
                 if not line:
                     continue
-                opponent_name, score = line.split()
+                opponent_name, score, _, _ = line.split(",")
                 if opponent_name == chlng.challenger.name:
                     games += 1
                     bot_score += int(score) / 2
@@ -783,8 +782,7 @@ def play_game(li: lichess.Lichess,
                         if winner is not None:
                             winning_name = game.white.name if winner == "white" else game.black.name
                             bot_score = (winning_name == user_profile["username"]) * 2
-                        results_queue.put_nowait((opponent_name, bot_score))
-                        print(f"Adding result: {opponent_name} {bot_score}")
+                        results_queue.put_nowait((opponent_name, bot_score, game.initial_fen, 'white' if game.is_white else 'black'))
 
                         engine.send_game_result(game, board)
                         conversation.send_message("player", goodbye)
