@@ -11,6 +11,7 @@ BASE_ELO = 3000
 MAX_VARIATION = 200
 AVERAGE_MOVES = 40
 TIME_DOUBLING_ELO = 200
+PAST_GAMES_FACTOR = 400
 
 # Define removable pieces with positional values
 piece_values = {
@@ -39,12 +40,13 @@ def get_positional_multiplier(square, piece_type):
 
 
 def generate_odds_fen(opponent_elo, num_games, bot_score, initial_time, increment, pawn_to_elo=PAWN_TO_ELO, variation_std=STD,
-                      max_variation=MAX_VARIATION, base_elo=BASE_ELO, average_moves=AVERAGE_MOVES, time_doubling_elo=TIME_DOUBLING_ELO):
+                      max_variation=MAX_VARIATION, base_elo=BASE_ELO, average_moves=AVERAGE_MOVES,
+                      time_doubling_elo=TIME_DOUBLING_ELO, past_games_factor=PAST_GAMES_FACTOR):
     """
     Generates a FEN with random color and controlled variation.
     variation_std: standard deviation for Elo adjustment (controls position difficulty spread)
     """
-    delta = (2 * bot_score - num_games) * (400.0 / (num_games + 10))
+    delta = (2 * bot_score - num_games) * (past_games_factor / (num_games + 10))
     adjusted_elo = opponent_elo - delta
 
     # Apply time control adjustment
